@@ -1,0 +1,31 @@
+[project]
+name = "superbells-credit-audit"
+version = "0.1.0"
+description = "Research prototype for explainable credit risk and on-chain integrity"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "pandas>=2.2,<3",
+  "scikit-learn>=1.5,<2",
+  "xgboost>=2.1,<4",
+  "shap>=0.46,<1",
+  "web3>=7,<8",
+  "vyper==0.4.3",
+  "xlrd>=2,<3",
+  "joblib>=1.4,<2",
+  "streamlit>=1.40,<2",
+]
+
+[dependency-groups]
+dev = ["pytest>=8,<9", "eth-ape>=0.8,<1; sys_platform != 'win32'", "ape-vyper>=0.8,<1; sys_platform != 'win32'"]
+
+[build-system]
+requires = ["setuptools>=75,<83"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+

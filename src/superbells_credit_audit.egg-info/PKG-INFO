@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: superbells-credit-audit
+Version: 0.1.0
+Summary: Research prototype for explainable credit risk and on-chain integrity
+Requires-Python: <3.13,>=3.10
+Requires-Dist: pandas<3,>=2.2
+Requires-Dist: scikit-learn<2,>=1.5
+Requires-Dist: xgboost<4,>=2.1
+Requires-Dist: shap<1,>=0.46
+Requires-Dist: web3<8,>=7
+Requires-Dist: vyper==0.4.3
+Requires-Dist: xlrd<3,>=2
+Requires-Dist: joblib<2,>=1.4
+Requires-Dist: streamlit<2,>=1.40
