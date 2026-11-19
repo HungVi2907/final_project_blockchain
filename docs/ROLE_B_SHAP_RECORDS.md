@@ -1,6 +1,6 @@
 # Hướng dẫn cho người B — SHAP, bản ghi và SQLite
 
-> **Cập nhật 19/11/2026:** Bài tham khảo chính là [Cheon et al., ICLR 2025](PROJECT_CONTEXT.md). B nhận artifact FICO HELOC đã được A tái lập/đánh giá trước, tính SHAP cho đầu ra `P(Bad)` và tạo record có model hash. Các mục Taiwan/Home Credit bên dưới là mốc của kế hoạch cũ, không còn là dữ liệu kết quả chính. Mã FICO tác giả dùng `Good=1`, `Bad=0`; phải kiểm tra chiều giải thích và additivity sau khi đổi sang xác suất rủi ro. SHAP là baseline giải thích trong bài ICLR, còn phần bản ghi audit là mở rộng của nhóm.
+> **Cập nhật 19/11/2026:** Bài tham khảo chính là [Cheon et al., ICLR 2025](PROJECT_CONTEXT.md). Bộ bàn giao [FICO HELOC, ba model và quy ước nhãn](A_TO_B_HANDOFF_HELOC.md) đã sẵn sàng cho B; B tính SHAP cho đầu ra `P(Bad)` và tạo record có model hash. Các mục Taiwan/Home Credit bên dưới là mốc của kế hoạch cũ, không còn là dữ liệu kết quả chính. Mã FICO tác giả dùng `Good=1`, `Bad=0`; phải kiểm tra chiều giải thích và additivity sau khi đổi sang xác suất rủi ro. SHAP là baseline giải thích trong bài ICLR, còn phần bản ghi audit là mở rộng của nhóm.
 
 **Người phụ trách:** Chưa gán tên. **Hạn nộp chính thức:** 04/12/2026 (giờ Moodle chưa rõ). Lịch nội bộ ở [kế hoạch chung](TEAM_3_PERSON_EXECUTION_GUIDE.md), giờ UTC+7.
 

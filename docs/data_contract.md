@@ -2,15 +2,15 @@
 
 **Nguồn phương pháp chính:** [Cheon et al., ICLR 2025](PROJECT_CONTEXT.md). Hợp đồng dữ liệu cho kết quả chính sẽ theo ba dataset của tác giả, ưu tiên FICO HELOC cho luồng A → B → C. Các mục Taiwan/Home Credit bên dưới chỉ mô tả nguyên mẫu và kế hoạch cũ; chúng không phải dữ liệu tái lập ICLR.
 
-## FICO HELOC — nguồn chính, chưa tái lập tại repo nhóm
+## FICO HELOC — nguồn chính, đã chạy lại Table 11
 
-Nguồn thực nghiệm: [thư mục FICO trong mã tác giả](https://github.com/ustunb/responsiveness/tree/paper/iclr2025/research/iclr2025/data/fico), gồm dữ liệu và script xử lý. Bài báo báo cáo 5.842 dòng, 43 feature sau xử lý; test AUC LR/XGBoost/RF = 0,788/0,785/0,790 với train/test 80/20. Cần kiểm chứng lại trên file thực, lưu commit SHA, checksum, quyền sử dụng, tỷ lệ lớp, missing/special values, feature list và split manifest. Script tác giả đặt seed 2338 và `fold_id=K05N01`; xác nhận fold thực tế trước khi công bố kết quả nhóm.
+Nguồn thực nghiệm: [thư mục FICO trong mã tác giả](https://github.com/ustunb/responsiveness/tree/paper/iclr2025/research/iclr2025/data/fico), gồm dữ liệu và script xử lý. Bài báo báo cáo 5.842 dòng, 43 feature sau xử lý; test AUC LR/XGBoost/RF = 0,788/0,785/0,790 với train/test 80/20. Nhóm đã chạy lại đúng 5.842 × 43, split 4.674/1.168 và ghi AUC cùng checksum tại [nhật ký](references/CHEON_2025_REPLICATION_LOG.md). Cần tiếp tục xác minh nguồn upstream/quyền sử dụng trước khi công bố dữ liệu hoặc model. Script tác giả đặt seed 2338 và `fold_id=K05N01`.
 
 **Nhãn:** `RiskPerformance` được mã hóa `Good=1`, `Bad=0` trong script FICO. Giữ chiều nhãn đó khi đối chiếu AUC bài báo. Adapter xuất bản ghi nhóm phải tính `risk_probability=P(Bad)=1-P(Good)`; B giải thích đúng đầu ra này và kiểm tra additivity. Không dùng `predict_proba[:,1]` trực tiếp làm risk.
 
 ## German Credit và Give Me Some Credit — kiểm tra độc lập
 
-[German](https://github.com/ustunb/responsiveness/tree/paper/iclr2025/research/iclr2025/data/german) là tập nhỏ để smoke, [Give Me Some Credit](https://github.com/ustunb/responsiveness/tree/paper/iclr2025/research/iclr2025/data/givemecredit) là tập lớn để mở rộng. Bài báo nêu lần lượt 1.000 và 120.268 dòng sau xử lý. Mỗi tập có preprocessing, split, artifact và mapping nhãn riêng; không chuyển mô hình giữa các tập. Chưa có EDA hoặc kết quả tái lập của nhóm trên hai tập này.
+[German](https://github.com/ustunb/responsiveness/tree/paper/iclr2025/research/iclr2025/data/german) là tập nhỏ đã dùng để smoke, [Give Me Some Credit](https://github.com/ustunb/responsiveness/tree/paper/iclr2025/research/iclr2025/data/givemecredit) là tập lớn đã chạy lại Table 11. Kích thước sau xử lý khớp bài báo: 1.000 × 36 và 120.268 × 23; phân bố nhãn, missing ban đầu và số AUC được ghi ở [nhật ký](references/CHEON_2025_REPLICATION_LOG.md). Mỗi tập có preprocessing, split, artifact và mapping nhãn riêng; không chuyển mô hình giữa các tập.
 
 ## Hồ sơ dữ liệu cũ — chỉ dùng cho smoke và lịch sử
 

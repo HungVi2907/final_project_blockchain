@@ -1,0 +1,10 @@
+dataset,model,n_rows,n_features,train_auc_paper,test_auc_paper,source_table,source_pdf_page
+heloc,LR,5842,43,0.772,0.788,11,26
+heloc,XGB,5842,43,0.859,0.785,11,26
+heloc,RF,5842,43,0.780,0.790,11,26
+german,LR,1000,36,0.819,0.760,11,26
+german,XGB,1000,36,0.971,0.794,11,26
+german,RF,1000,36,0.828,0.766,11,26
+givemecredit,LR,120268,23,0.841,0.844,11,26
+givemecredit,XGB,120268,23,0.875,0.793,11,26
+givemecredit,RF,120268,23,0.864,0.835,11,26
