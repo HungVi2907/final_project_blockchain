@@ -1,36 +1,26 @@
-# Hướng dẫn cho người A — Dữ liệu và mô hình học máy
+# Người A — dữ liệu, tái thực nghiệm ICLR 2025 và mô hình
 
-**Người phụ trách:** Chưa gán tên. **Hạn nộp chính thức:** 04/12/2026 (giờ Moodle chưa rõ). Lịch nội bộ và các cổng tích hợp ở [kế hoạch chung](TEAM_3_PERSON_EXECUTION_GUIDE.md); toàn bộ giờ nội bộ là UTC+7.
+**Người thực hiện hiện tại:** người dùng. **Bài tham khảo chính:** Cheon et al., *Feature Responsiveness Scores: Model-Agnostic Explanations for Recourse* (ICLR 2025). Đọc [bối cảnh hiện hành](PROJECT_CONTEXT.md), [data contract](data_contract.md), [giao diện](interface_contract.md) và [kế hoạch ba người](TEAM_3_PERSON_EXECUTION_GUIDE.md). Hạn nộp nhóm được ghi là 04/12/2026; các mốc nội bộ cần điều chỉnh theo tiến độ thực tế.
 
-## Mục tiêu và phạm vi
+## Mục tiêu
 
-Bạn sở hữu S1–S6, E1 và E7: lấy và kiểm tra dữ liệu, chia train/validation/test độc lập cho `taiwan_uci350` và `home_credit_2018`, fit tiền xử lý chỉ trên train, so sánh LR/RF/XGBoost, chọn model/ngưỡng trên validation, đánh giá một lần trên test, đóng băng artifact và cung cấp `predict()` theo [giao diện v1](interface_contract.md). Không gộp hai dataset, không chuyển model qua dataset, không đưa ID hoặc target vào predictor.
-
-File sở hữu: `src/credit_audit/data.py`, `src/credit_audit/ml.py`, `scripts/download_taiwan.py`, `scripts/taiwan_smoke.py`, `docs/data_contract.md`, `tests/test_data_ml.py` và các file data/ML mới. Không sửa `records.py`, `storage.py`, `chain.py`, `contracts/`, `schemas/` hoặc UI. File chung cần PR riêng và review của B/C.
-
-## Trạng thái đang có
-
-Nguồn Taiwan UCI đã tải và kiểm tra: 30.000 hàng, 23 predictor, 6.636 nhãn dương; SHA-256 XLS và vấn đề mã giá trị/duplicate được ghi trong `docs/data_contract.md`. Bản smoke hiện chỉ dùng LR, split 21.000/4.500/4.500 với seed 42 và ngưỡng chọn trên validation. Các metric smoke không phải so sánh E1. Home Credit chưa được tải. Dữ liệu gốc và artifact nằm ngoài Git.
+Tái lập **phần dự đoán tín dụng của tác giả trước**, rồi mới bàn giao model cho B tính SHAP và C tích hợp chain. Dữ liệu chính cho luồng tích hợp là FICO HELOC; German Credit dùng để smoke, Give Me Some Credit để kiểm tra trên tập lớn. Mô hình cần đối chiếu là Logistic Regression, XGBoost và Random Forest. Kết quả chuẩn là **Table 11, Appendix B.4** của [PDF ICLR](references/Cheon_2025_ICLR_Feature_Responsiveness_Scores.pdf), không phải số liệu Taiwan/Home Credit của bài PLOS cũ.
 
 ## Việc cần làm theo thứ tự
 
-1. **Đến G0 — 16/11, 20:00:** Kiểm tra lại checksum Taiwan, manifest split và allow-list. Chốt chính sách duplicate, mã EDUCATION/MARRIAGE/PAY bất thường và feature nhạy cảm; ghi quyết định vào data contract. Với Home Credit, kiểm tra quyền truy cập Kaggle, xác định `application_train.csv` và phạm vi bảng phụ; chỉ dùng bảng phụ nếu có quy tắc dữ liệu sẵn tại thời điểm quyết định.
-2. **Đến G1 — 20/11, 20:00:** Cài đặt cùng một giao thức chọn LR/RF/XGBoost trên Taiwan. Tuning chỉ trong train (CV hoặc grid đã ghi), chọn model và threshold trên validation, test một lần. Lưu metric ROC-AUC, PR-AUC, Recall/F1 cho lớp 1, confusion matrix, seed, split checksum và các phiên bản. Xuất artifact gồm pipeline đã fit, thứ tự feature, `dataset_id`, ngưỡng, version và hash file bundle. Bàn giao `predict()` và fixture cho B/C.
-3. **Đến G2 — 25/11, 20:00:** Lặp lại quy trình độc lập trên Home Credit dữ liệu có nhãn. Không dùng `application_test.csv` không nhãn để báo metric. Chứng minh chọn đúng artifact theo `dataset_id`; đưa một hồ sơ Taiwan và một hồ sơ Home Credit hợp lệ cho B thử `explain()`.
-4. **Đến G3 — 29/11, 20:00:** Chạy E1/E7, lưu bảng kết quả thực tế, phân tích lỗi/imbalance. Nếu báo khoảng tin cậy, chốt phương pháp bootstrap/seed trước khi tính. Không so AUC giữa hai dataset như bằng chứng độ khó hay chuyển giao.
-5. **Đến G4 — 02/12, 20:00:** Chạy lại từ môi trường sạch, kiểm tra artifact hash và figure/bảng trong báo cáo; giao hướng dẫn tái lập cho C.
+1. Ghi commit SHA của [repo tác giả, nhánh `paper/iclr2025`](https://github.com/ustunb/responsiveness/tree/paper/iclr2025), phiên bản phụ thuộc, URL/checksum dữ liệu và quyền sử dụng. Kiểm tra EDA trên dữ liệu thật: số dòng, phân bố lớp, missing, giá trị đặc biệt, đặc trưng đầu vào; đối chiếu 5.842/1.000/120.268 dòng sau xử lý mà bài báo nêu. Không dùng dữ liệu giả lập để báo kết quả chính.
+2. Chạy smoke **German Credit** theo script `setup_dataset_actionset_german.py` và `train_models.py`; kiểm tra split 80/20, `fold_id=K05N01`, seed 2338 và hướng nhãn trong mã. Ghi lệnh, thời gian, lỗi phiên bản và AUC thực đo. Smoke chỉ xác nhận pipeline chạy, chưa phải bảng tái lập đầy đủ.
+3. Chạy full **FICO HELOC** cho LR/XGBoost/RF theo mã và cấu hình tác giả, không tự đổi feature engineering hoặc tuning trong lần so sánh đầu. Đối chiếu test AUC lần lượt **0,788 / 0,785 / 0,790**; ghi chênh lệch, số dòng, split, preprocessing và hyperparameters. Nếu cần điều chỉnh để chạy trên môi trường hiện tại, ghi rõ từng thay đổi trước khi diễn giải sai khác.
+4. Khóa artifact được chọn cho luồng nhóm: preprocessing, thứ tự feature, model, phiên bản, nguồn/split manifest và SHA-256. Bàn giao API `predict()` cùng ít nhất một fixture HELOC hợp lệ cho B/C. Sau đó mới thực hiện SHAP/B và chain/C. Có thể tái lập Give Me Some Credit như phép kiểm tra độc lập nếu thời gian và tài nguyên đủ; báo kết quả riêng.
+5. Đối với bản ghi nhóm, giữ đúng quy ước `risk_probability=P(Bad/default)`. **Mã FICO tác giả dùng `Good=1`, `Bad=0`**; vì vậy adapter phải đổi `P(Bad)=1-P(Good)` sau khi đã đo AUC theo đúng nhãn tác giả. B phải giải thích đúng xác suất risk được ghi trong record; kiểm tra mapping nhãn từng dataset riêng.
 
-## Tiêu chí nghiệm thu
+## Tiêu chí bàn giao
 
-- Manifest split có source SHA-256 và ID ba tập không giao nhau; chạy lại cùng seed cho cùng manifest.
-- Imputer, encoder, scaler chỉ fit train; validation/test chỉ `transform`. Test thay dữ liệu validation không đổi thống kê đã fit.
-- Với mỗi dataset, có một model version/artifact riêng; load lại artifact cho cùng xác suất trong dung sai; reject input sai dataset hoặc feature schema.
-- Mọi metric test được tính sau khi khóa model và ngưỡng. Bảng kết quả ghi rõ thực đo, không trộn với số của bài báo Hlongwane.
-- `predict()` trả đúng các key trong `docs/interface_contract.md`, để B tạo SHAP và C tích hợp UI.
+- EDA, checksum, commit SHA, seed/fold và lệnh chạy được ghi, split train/test không giao nhau; transform có học tham số chỉ fit trên train.
+- Bảng so **AUC tác giả / AUC nhóm / chênh lệch**, không gộp số liệu các tập dữ liệu; số chưa chạy ghi “chưa chạy”.
+- Artifact load lại cho cùng prediction; `risk_probability` và chiều nhãn đã được kiểm tra bằng ví dụ Good/Bad. Model version và hash artifact đi vào bản ghi qua B.
+- Hợp đồng `dataset_id`/schema được nâng nhất quán trước khi tạo record HELOC. Mã hiện có chỉ hỗ trợ Taiwan LR smoke; không đổi tên dataset để giả làm replication ICLR.
 
-## Prompt đưa cho agent của A
+## File phụ trách
 
-```text
-Bạn là agent phụ trách vai trò A (dữ liệu và ML) của dự án Super Bells. Trước khi sửa code, đọc docs/ROLE_A_DATA_ML.md, docs/TEAM_3_PERSON_EXECUTION_GUIDE.md, docs/interface_contract.md, docs/data_contract.md, báo cáo Week 3 và kiểm tra git status. Chỉ sửa file thuộc quyền sở hữu A; với file chung hoặc giao diện cần thay, hãy mô tả đề xuất để B/C review trước. Thực hiện mốc gần nhất chưa đạt trong tài liệu A, kiểm thử chống rò rỉ và khả năng tái lập, bàn giao artifact/fixture theo giao diện v1. Không commit dữ liệu gốc, model artifact, SQLite hay bí mật. Kết thúc bằng: việc đã làm, lệnh chạy/test và kết quả, file đã sửa, API bàn giao, rủi ro còn lại và mốc deadline tiếp theo. Không gọi kết quả smoke là kết quả thí nghiệm E1 chính thức.
-```
-
+`src/credit_audit/data.py`, `src/credit_audit/ml.py`, script dữ liệu/train/evaluate mới, `docs/data_contract.md`, `tests/test_data_ml.py` và ghi chú tái lập ICLR. `records.py`, `storage.py`, `chain.py`, `contracts/`, `schemas/` và UI là phần B/C hoặc file chung, cần phối hợp khi sửa API. Không commit dữ liệu gốc, artifact, SQLite hay khóa bí mật.

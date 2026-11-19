@@ -1,5 +1,7 @@
 # Hướng dẫn cho người C — Blockchain, Web3 và giao diện
 
+> **Cập nhật 19/11/2026:** Theo [bối cảnh hiện hành](PROJECT_CONTEXT.md), luồng kết quả chính sẽ dùng artifact FICO HELOC của A và record SHAP của B. Phần Vyper + Ape, B0/B1/B2 và xác minh hai hash vẫn giữ; các mốc Taiwan/Home Credit bên dưới là kế hoạch cũ. C chỉ tích hợp hồ sơ HELOC sau khi B bàn giao record/schema version phù hợp. Blockchain là phần mở rộng của nhóm, không được quy cho bài ICLR.
+
 **Người phụ trách:** Chưa gán tên. **Hạn nộp chính thức:** 04/12/2026 (giờ Moodle chưa rõ). Mốc nội bộ trong [kế hoạch chung](TEAM_3_PERSON_EXECUTION_GUIDE.md), giờ UTC+7.
 
 ## Mục tiêu và phạm vi
@@ -16,7 +18,7 @@ File sở hữu: `contracts/`, `src/credit_audit/chain.py`, `src/credit_audit/ap
 
 1. **Đến G0 — 16/11, 20:00:** Review ABI, event, quyền admin/writer, quy tắc record bất biến và status map với B. Chốt số xác nhận cho Anvil/testnet và hình thức deployment manifest. Không dùng private key testnet trong repo.
 2. **Đến G1 — 20/11, 20:00:** Viết contract tests cho unauthorized write, grant/revoke, duplicate ID, zero hash, getter, hash verification và event. Dùng golden vector B để kiểm tra ba `bytes32`. Cài Ape trong WSL nếu khả thi; Web3/pytest là fallback test tối thiểu đã có.
-3. **Đến G2 — 25/11, 20:00:** Hoàn thiện backend state machine và Streamlit: tạo assessment, chi tiết, trạng thái transaction, xác minh theo ID, audit/error. Gắn A `predict()` và B `explain()/create_record()` theo giao diện v1. Một hồ sơ Taiwan phải đi từ input UI đến `VERIFIED`; thử sửa record trên bản sao trả `MISMATCH`. Home Credit chọn đúng artifact độc lập.
+3. **Đến G2 — 29/11, 20:00:** Hoàn thiện backend state machine và Streamlit: tạo assessment, chi tiết, trạng thái transaction, xác minh theo ID, audit/error. Gắn A `predict()` và B `explain()/create_record()` theo giao diện đã nâng cho ICLR. Một hồ sơ FICO HELOC phải đi từ input UI đến `VERIFIED`; thử sửa record trên bản sao trả `MISMATCH`. Taiwan smoke cũ chỉ là test hồi quy.
 4. **Đến G3 — 29/11, 20:00:** Chạy B0/B1/B2 cho E4–E6, đo gas/write, latency và lỗi giả lập. Lưu môi trường, số lần lặp, warm-up, median/p95; tách Anvil và Sepolia nếu nhóm chạy Sepolia. Test pending, receipt thất bại, RPC unavailable, duplicate retry, reorg/mất record. Không suy ra VERIFIED khi chain không đọc được.
 5. **Đến G4 — 02/12, 20:00:** Demo từ môi trường sạch, README triển khai, test e2e và bảng gas/latency; phối hợp kiểm tra báo cáo. Xác nhận giờ Moodle và người nộp trước 04/12.
 

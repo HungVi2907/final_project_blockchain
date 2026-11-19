@@ -1,5 +1,7 @@
 # Phụ lục về mức độ sẵn sàng triển khai
 
+> **Ảnh chụp kế hoạch trước 19/11/2026.** Bài tham khảo chính và tập dữ liệu thực nghiệm đã đổi sang [Cheon et al., ICLR 2025](PROJECT_CONTEXT.md). Các yêu cầu kỹ thuật chung còn hữu ích; mục Taiwan/Home Credit không còn là kế hoạch tái lập chính.
+
 ## Mục đích
 
 Báo cáo và đề xuất Tuần 3 xác định định hướng nghiên cứu, phạm vi, các ràng buộc chính, quy trình ở mức cao (S1-S11), các công nghệ được chọn và kế hoạch đánh giá của dự án. Những tài liệu này đủ để giải thích dự án *là gì* và vì sao I1 là cải tiến được đề xuất.

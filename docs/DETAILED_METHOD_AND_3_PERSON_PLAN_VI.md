@@ -1,5 +1,7 @@
 # Đặc tả phương pháp chi tiết và kế hoạch làm việc cho ba người
 
+> **Bản kế hoạch Tuần 3 lưu trữ.** Phần dữ liệu/ML đã được thay bằng [bối cảnh ICLR 2025](PROJECT_CONTEXT.md) ngày 19/11/2026. Các bước Taiwan/Home Credit và seed 42 bên dưới chỉ phản ánh kế hoạch cũ; thiết kế SHAP, bản ghi và blockchain S7–S11 cần được áp dụng sau khi nâng dataset ID, schema và xử lý chiều nhãn FICO.
+
 Tài liệu này triển khai quy trình S1–S11 của báo cáo Tuần 3 thành các bước có đầu vào, đầu ra, cách thực hiện và phép kiểm chứng. Hệ thống là nguyên mẫu nghiên cứu đánh giá rủi ro tín dụng có giải thích và bằng chứng toàn vẹn, không phải hệ thống phê duyệt khoản vay thực tế. Hai bộ Home Credit và Taiwan được xử lý độc lập từ chia dữ liệu đến đánh giá; chỉ bản ghi quyết định và cam kết của nó dùng chung một giao thức.
 
 Các con số trong ví dụ dưới đây là **giả lập**. Ngưỡng, seed, dung sai và giao diện được nêu là **đề xuất triển khai** để nhóm có thể bắt đầu, không phải kết quả đã đo hoặc lựa chọn đã được báo cáo Tuần 3 xác nhận. Nhóm phải chốt chúng trong cấu hình và kiểm thử trước khi tạo kết quả chính thức.

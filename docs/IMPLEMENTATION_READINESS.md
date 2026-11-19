@@ -1,5 +1,7 @@
 # Implementation Readiness Supplement
 
+> **Historical plan before 2026-11-19.** The primary reference and replication datasets have changed to [Cheon et al., ICLR 2025](PROJECT_CONTEXT.md). General engineering requirements remain useful; Taiwan/Home Credit are no longer the primary replication plan.
+
 ## Purpose
 
 The Week 3 report and proposal define the project's research direction, scope, main constraints, high-level workflow (S1-S11), selected technologies, and evaluation plan. They are sufficient to explain *what* the project is and why I1 is the proposed improvement.

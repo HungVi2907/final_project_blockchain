@@ -1,14 +1,14 @@
 # Hợp đồng giao diện v1
 
-Trạng thái: chốt cho bản chạy thử Taiwan + Anvil. Mọi thay đổi phá tương thích phải tăng `schema_version` và được ba người phụ trách dữ liệu/ML, bản ghi/SHAP, chain/UI cùng duyệt.
+**Trạng thái:** v1 chỉ chốt cho bản chạy thử Taiwan + Anvil, **chưa hỗ trợ dữ liệu ICLR 2025**. Theo [bối cảnh hiện hành](PROJECT_CONTEXT.md), A/B/C cần nâng schema và API để dùng `fico_heloc_iclr2025` (ưu tiên), `german_credit_iclr2025`, `givemecredit_iclr2025`; cập nhật enum trong JSON Schema, validation trong `records.py`, test và UI đồng bộ trước khi tạo record. Không dùng ID Taiwan/Home Credit để chứa dữ liệu FICO. Mọi thay đổi phá tương thích phải tăng `schema_version` và được ba người phụ trách dữ liệu/ML, bản ghi/SHAP, chain/UI cùng duyệt.
 
 ## Định danh và dữ liệu
 
-- `dataset_id`: `taiwan_uci350` hoặc `home_credit_2018`; mỗi ID ánh xạ một pipeline và artifact riêng.
+- `dataset_id` trong v1 hiện tại: `taiwan_uci350` hoặc `home_credit_2018`; mỗi ID ánh xạ một pipeline và artifact riêng. Bộ ID ICLR ở trên là mục tiêu cho version mới, chưa được code hỗ trợ.
 - `decision_id`: 32 byte ngẫu nhiên, biểu diễn trong JSON bằng 64 ký tự hex chữ thường, truyền vào Vyper dưới dạng `bytes32`.
 - `input_reference`: 16 byte ngẫu nhiên biểu diễn hex, độc lập với ID gốc.
 - `nonce`: 16 byte ngẫu nhiên biểu diễn hex; `timestamp_utc` ở độ chính xác giây, dạng `YYYY-MM-DDTHH:MM:SSZ`.
-- Nhãn dương `1` là default/khó khăn thanh toán; `risk_probability` luôn là xác suất của lớp `1` từ `predict_proba`.
+- `risk_probability` trong bản ghi nhóm luôn là xác suất Bad/default. Riêng mã FICO của Cheon et al. huấn luyện với `Good=1`, `Bad=0`, nên adapter phải dùng `P(Bad)=1-predict_proba(Good)`; không suy rằng cột `predict_proba[:,1]` luôn là rủi ro. B kiểm tra SHAP additivity với đúng đầu ra risk đã ghi.
 
 ## Các hàm giữa ba phần
 

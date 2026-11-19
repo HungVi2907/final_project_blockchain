@@ -1,10 +1,12 @@
 # Hướng dẫn cho người B — SHAP, bản ghi và SQLite
 
+> **Cập nhật 19/11/2026:** Bài tham khảo chính là [Cheon et al., ICLR 2025](PROJECT_CONTEXT.md). B nhận artifact FICO HELOC đã được A tái lập/đánh giá trước, tính SHAP cho đầu ra `P(Bad)` và tạo record có model hash. Các mục Taiwan/Home Credit bên dưới là mốc của kế hoạch cũ, không còn là dữ liệu kết quả chính. Mã FICO tác giả dùng `Good=1`, `Bad=0`; phải kiểm tra chiều giải thích và additivity sau khi đổi sang xác suất rủi ro. SHAP là baseline giải thích trong bài ICLR, còn phần bản ghi audit là mở rộng của nhóm.
+
 **Người phụ trách:** Chưa gán tên. **Hạn nộp chính thức:** 04/12/2026 (giờ Moodle chưa rõ). Lịch nội bộ ở [kế hoạch chung](TEAM_3_PERSON_EXECUTION_GUIDE.md), giờ UTC+7.
 
 ## Mục tiêu và phạm vi
 
-Bạn sở hữu S7–S9, lưu trữ SQLite, E2/E3: giải thích local SHAP cho artifact của A, kiểm tra additivity trước làm tròn, tạo `R`, canonical UTF-8 bytes, hai SHA-256 commitment, golden vectors và kiểm thử sửa đổi. Cần hỗ trợ cả hai dataset nhưng không huấn luyện/chọn model. Theo [giao diện v1](interface_contract.md), `risk_probability` là `predict_proba` lớp 1; SHAP `model_output` có thể là raw margin hoặc probability nhưng phải ghi `output_space` và kiểm tra trong đúng không gian.
+Bạn sở hữu S7–S9, lưu trữ SQLite, E2/E3: giải thích local SHAP cho artifact của A, kiểm tra additivity trước làm tròn, tạo `R`, canonical UTF-8 bytes, hai SHA-256 commitment, golden vectors và kiểm thử sửa đổi. Ưu tiên FICO HELOC của ICLR; các tập mở rộng dùng artifact riêng và không do B huấn luyện/chọn model. Theo [giao diện](interface_contract.md), `risk_probability` là xác suất Bad/default; với FICO của tác giả, nó bằng `1 - P(Good)`, không phải `predict_proba[:,1]`. SHAP `model_output` có thể là raw margin hoặc probability nhưng phải ghi `output_space` và kiểm tra trong đúng không gian.
 
 File sở hữu: `src/credit_audit/records.py`, `src/credit_audit/storage.py`, `schemas/`, `tests/test_records.py` và file `src/credit_audit/explain.py`, test/fixture mới của B. Không sửa data/ML, Vyper, Web3, UI. Thay đổi file chung cần review A/C.
 
@@ -16,7 +18,7 @@ File sở hữu: `src/credit_audit/records.py`, `src/credit_audit/storage.py`, `
 
 1. **Đến G0 — 16/11, 20:00:** Review `schemas/decision_record_v1.schema.json` với A/C. Chốt xử lý Unicode NFC, float → chuỗi 8 chữ số half-even, negative zero, timestamp/nonce, optional/null, duplicate feature và lỗi input. Tạo golden vectors với bytes/hash dự kiến và input invalid; hai người khác phải dùng cùng vectors.
 2. **Đến G1 — 20/11, 20:00:** Đưa `explain(artifact, transformed_features)` vào module riêng. Với LR có thể đối chiếu công thức tuyến tính với SHAP package trên WSL; RF/XGBoost phải chọn explainer và `output_space` tương thích phiên bản khóa. Dùng background chỉ từ train và seed cố định. Giao fixture SHAP và record cho C; ghi cách ánh xạ feature đã biến đổi sang tên hiển thị.
-3. **Đến G2 — 25/11, 20:00:** Hoàn thiện persistence: migration có version, unique ID, canonical BLOB/JSON nhất quán, audit fields (tx, chain, block, confirmation, lỗi), retry idempotent. Tạo bản ghi cho artifact Taiwan và Home Credit từ A. Mọi lỗi additivity hoặc schema phải chặn việc ghi chain.
+3. **Đến G2 — 29/11, 20:00:** Hoàn thiện persistence: migration có version, unique ID, canonical BLOB/JSON nhất quán, audit fields (tx, chain, block, confirmation, lỗi), retry idempotent. Tạo bản ghi cho artifact FICO HELOC từ A sau khi nâng schema/dataset ID; Taiwan chỉ giữ làm fixture hồi quy. Mọi lỗi additivity hoặc schema phải chặn việc ghi chain.
 4. **Đến G3 — 29/11, 20:00:** E2 đo residual và biểu đồ local/global. E3 tạo các tình huống sửa probability, contribution, model version, JSON hiển thị, canonical bytes, cả record và hash SQLite; chứng minh B2 phát hiện mọi sửa đổi sau anchor. Ghi detection count và false alerts trên fixture sạch.
 5. **Đến G4 — 02/12, 20:00:** Chạy golden vectors, schema tests, migration tests và bàn giao biểu đồ/giới hạn SHAP cho báo cáo.
 
