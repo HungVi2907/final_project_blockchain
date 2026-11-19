@@ -1,62 +1,108 @@
-"""Register a Taiwan decision on disposable Anvil and verify tamper detection."""
-from pathlib import Path
+"""Measure the local B2 flow using synthetic decisions, or verify an existing Taiwan fixture."""
+import argparse
+from contextlib import closing
+from dataclasses import asdict
 import json
+import math
+import os
+import platform
 import sqlite3
+from statistics import median
+from time import perf_counter
 
-from web3 import Web3
-
-from credit_audit.chain import compile_registry, deploy, verify
-from credit_audit.records import canonical_serialize, commitments
+from credit_audit.chain import ANVIL_CHAIN_ID, DEFAULT_RPC, connect_anvil, inspect_decision, submit_saved
+from credit_audit.demo import create_demo_decision
+from credit_audit.records import canonical_serialize
 from credit_audit.storage import connect, get
+from deploy_anvil import MANIFEST, ROOT, deploy_local
 
-ROOT = Path(__file__).resolve().parents[1]
+DEMO_DB = ROOT / "artifacts/anvil_demo.sqlite3"
+DEMO_MANIFEST = ROOT / "artifacts/anvil_demo_deployment.json"
+
+
+def run_sample(db, registry, w3, sender, decision_id=None):
+    start = perf_counter()
+    decision_id = decision_id or create_demo_decision(db)
+    submit_started = perf_counter()
+    tx_hash = submit_saved(db, registry, w3, decision_id, sender, expected_chain_id=ANVIL_CHAIN_ID)
+    receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=15, poll_latency=0.05)
+    confirmed = perf_counter()
+    result = inspect_decision(db, registry, w3, decision_id, expected_chain_id=ANVIL_CHAIN_ID)
+    verified = perf_counter()
+    if result.status != "VERIFIED":
+        raise RuntimeError(f"{result.status}: {result.reason}")
+    return {
+        **asdict(result), "decision_id": decision_id,
+        "fee_wei": receipt.gasUsed * receipt.effectiveGasPrice,
+        "confirmation_ms": (confirmed - submit_started) * 1000,
+        "total_ms": (verified - start) * 1000,
+    }
+
+
+def check_tampering(db, registry, w3, decision_id):
+    saved = get(db, decision_id)
+    changed = saved["record"] | {"risk_probability": "0.99999999"}
+    with closing(sqlite3.connect(":memory:")) as copy:
+        db.backup(copy)
+        copy.execute("UPDATE decisions SET display_json=? WHERE decision_id=?", (json.dumps(changed), decision_id))
+        for replace_bytes in (False, True):
+            if replace_bytes:
+                copy.execute("UPDATE decisions SET canonical_bytes=? WHERE decision_id=?",
+                             (canonical_serialize(changed), decision_id))
+            result = inspect_decision(copy, registry, w3, decision_id, expected_chain_id=ANVIL_CHAIN_ID)
+            if result.status != "MISMATCH":
+                raise RuntimeError(f"Expected MISMATCH, got {result.status}")
+
+
+def summarize(samples):
+    result = {}
+    for key in ("gas_used", "fee_wei", "confirmation_ms", "total_ms"):
+        values = sorted(sample[key] for sample in samples)
+        result[key] = {"median": median(values), "p95": values[math.ceil(0.95 * len(values)) - 1]}
+    return result
 
 
 def main():
-    w3 = Web3(Web3.HTTPProvider("http://127.0.0.1:8545", request_kwargs={"timeout": 10}))
-    if not w3.is_connected() or w3.eth.chain_id != 31337:
-        raise RuntimeError("Local Anvil at chain 31337 is required")
-    admin = w3.eth.accounts[0]
-    non_writer = w3.eth.accounts[1]
-    registry = deploy(w3, compile_registry(ROOT / "contracts/DecisionRegistry.vy"), admin)
-    db = connect(ROOT / "artifacts/audit.sqlite3")
-    summary = json.loads((ROOT / "artifacts/taiwan_smoke_summary.json").read_text(encoding="utf-8"))
-    decision_id = summary["decision_id"]
-    saved = get(db, decision_id)
-    record_hash, model_hash = commitments(saved["record"], saved["canonical_bytes"])
-    assert verify(db, registry, w3, decision_id) == "NOT_FOUND"
-    try:
-        registry.functions.register_record(bytes.fromhex(decision_id), record_hash, model_hash).transact({"from": non_writer})
-    except Exception:
-        pass
-    else:
-        raise AssertionError("Non-writer was allowed to register")
-    tx = registry.functions.register_record(bytes.fromhex(decision_id), record_hash, model_hash).transact({"from": admin})
-    receipt = w3.eth.wait_for_transaction_receipt(tx)
-    assert receipt.status == 1
-    db.execute("UPDATE decisions SET tx_hash=?, chain_id=?, block_number=?, status=? WHERE decision_id=?", (tx.hex(), w3.eth.chain_id, receipt.blockNumber, "CONFIRMED", decision_id))
-    db.commit()
-    assert verify(db, registry, w3, decision_id) == "VERIFIED"
-    audit_copy = sqlite3.connect(":memory:")
-    db.backup(audit_copy)
-    tampered = saved["record"].copy()
-    tampered["risk_probability"] = "0.99999999"
-    audit_copy.execute("UPDATE decisions SET display_json=? WHERE decision_id=?", (json.dumps(tampered), decision_id))
-    audit_copy.commit()
-    assert verify(audit_copy, registry, w3, decision_id) == "MISMATCH"
-    audit_copy.execute("UPDATE decisions SET canonical_bytes=? WHERE decision_id=?", (canonical_serialize(tampered), decision_id))
-    audit_copy.commit()
-    assert verify(audit_copy, registry, w3, decision_id) == "MISMATCH"
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--rpc", default=DEFAULT_RPC)
+    parser.add_argument("--runs", type=int, default=1)
+    parser.add_argument("--warmup", type=int, default=0)
+    parser.add_argument("--taiwan", action="store_true", help="Use the existing local Taiwan smoke record once")
+    options = parser.parse_args()
+    if options.runs < 1 or options.warmup < 0 or (options.taiwan and (options.runs != 1 or options.warmup)):
+        parser.error("Use runs >= 1 and warmup >= 0; --taiwan uses exactly one run and no warm-up")
+    w3 = connect_anvil(options.rpc)
+    db_path = ROOT / "artifacts/audit.sqlite3" if options.taiwan else DEMO_DB
+    manifest = MANIFEST if options.taiwan else DEMO_MANIFEST
+    sender = w3.eth.accounts[0]
+    with closing(connect(db_path)) as db:
+        decision_id = None
+        if options.taiwan:
+            source = ROOT / "artifacts/taiwan_smoke_summary.json"
+            if not source.is_file():
+                parser.error("Generate a Taiwan smoke record first")
+            decision_id = json.loads(source.read_text(encoding="utf-8"))["decision_id"]
+            saved = get(db, decision_id)
+            if saved is None or saved["tx_hash"] or saved["status"] != "PENDING":
+                parser.error("Generate a fresh Taiwan smoke record first")
+        registry = deploy_local(w3, manifest)
+        for _ in range(options.warmup):
+            run_sample(db, registry, w3, sender)
+        samples = [run_sample(db, registry, w3, sender, decision_id) for _ in range(options.runs)]
+        check_tampering(db, registry, w3, samples[-1]["decision_id"])
+
     result = {
-        "chain_id": w3.eth.chain_id, "contract_address": registry.address,
-        "decision_id": decision_id, "tx_hash": tx.hex(), "block_number": receipt.blockNumber,
-        "gas_used": receipt.gasUsed, "verification": "VERIFIED", "tampered_verification": "MISMATCH",
-        "local_record_and_hash_tampering_detected": True, "non_writer_rejected": True,
+        "network": w3.client_version, "platform": platform.platform(), "python": platform.python_version(),
+        "machine": platform.machine(), "logical_cpus": os.cpu_count(), "min_confirmations": 1,
+        "chain_id": ANVIL_CHAIN_ID, "contract_address": registry.address, "decision_id": samples[-1]["decision_id"],
+        "source": "taiwan_smoke" if options.taiwan else "synthetic_demo", "baseline": "B2",
+        "runs": options.runs, "warmup": options.warmup, "summary": summarize(samples),
+        "tampered_verification": "MISMATCH", "samples": samples,
     }
-    (ROOT / "artifacts/anvil_smoke_summary.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
-    print(json.dumps(result, indent=2))
+    output = ROOT / "artifacts/anvil_smoke_summary.json"
+    output.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    print(json.dumps({key: value for key, value in result.items() if key != "samples"}, indent=2))
 
 
 if __name__ == "__main__":
     main()
-
