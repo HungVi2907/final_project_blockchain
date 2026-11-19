@@ -1,38 +1,66 @@
-# Hướng dẫn cho người B — SHAP, bản ghi và SQLite
+# Context người B — SHAP, bản ghi và SQLite
 
-> **Cập nhật 19/11/2026:** Bài tham khảo chính là [Cheon et al., ICLR 2025](PROJECT_CONTEXT.md). Bộ bàn giao [FICO HELOC, ba model và quy ước nhãn](A_TO_B_HANDOFF_HELOC.md) đã sẵn sàng cho B; B tính SHAP cho đầu ra `P(Bad)` và tạo record có model hash. Các mục Taiwan/Home Credit bên dưới là mốc của kế hoạch cũ, không còn là dữ liệu kết quả chính. Mã FICO tác giả dùng `Good=1`, `Bad=0`; phải kiểm tra chiều giải thích và additivity sau khi đổi sang xác suất rủi ro. SHAP là baseline giải thích trong bài ICLR, còn phần bản ghi audit là mở rộng của nhóm.
+**Cập nhật 19/11/2026.** B phụ trách S7–S9, SQLite và thí nghiệm E2/E3. Tập chính của luồng A → B → C là **FICO HELOC** theo Cheon et al. (ICLR 2025). Nhóm dùng SHAP, một baseline giải thích trong bài, để tạo bản ghi kiểm toán off-chain. Phạm vi hiện tại gồm phần dự đoán Table 11 đã chạy lại và phần kiểm toán do nhóm phát triển. RESP và các thí nghiệm chất lượng giải thích của bài chưa được tái lập. [Bối cảnh nghiên cứu](PROJECT_CONTEXT.md) · [Nhật ký tái thực nghiệm](references/CHEON_2025_REPLICATION_LOG.md)
 
-**Người phụ trách:** Chưa gán tên. **Hạn nộp chính thức:** 04/12/2026 (giờ Moodle chưa rõ). Lịch nội bộ ở [kế hoạch chung](TEAM_3_PERSON_EXECUTION_GUIDE.md), giờ UTC+7.
+**Người phụ trách:** Chưa gán tên. **Hạn nộp:** 04/12/2026, giờ đóng Moodle chưa xác nhận. Các mốc nội bộ dùng giờ Việt Nam. [Kế hoạch nhóm](TEAM_3_PERSON_EXECUTION_GUIDE.md)
 
-## Mục tiêu và phạm vi
+## Trạng thái ngày 19/11
 
-Bạn sở hữu S7–S9, lưu trữ SQLite, E2/E3: giải thích local SHAP cho artifact của A, kiểm tra additivity trước làm tròn, tạo `R`, canonical UTF-8 bytes, hai SHA-256 commitment, golden vectors và kiểm thử sửa đổi. Ưu tiên FICO HELOC của ICLR; các tập mở rộng dùng artifact riêng và không do B huấn luyện/chọn model. Theo [giao diện](interface_contract.md), `risk_probability` là xác suất Bad/default; với FICO của tác giả, nó bằng `1 - P(Good)`, không phải `predict_proba[:,1]`. SHAP `model_output` có thể là raw margin hoặc probability nhưng phải ghi `output_space` và kiểm tra trong đúng không gian.
+| Hạng mục | Trạng thái |
+| --- | --- |
+| Bàn giao từ A | Nhật ký ghi nhận đã huấn luyện LR, XGBoost và RF trên HELOC, với 43 feature sau xử lý, train/test 4.674/1.168, fold `K05N01`, seed 2338. Tài liệu bàn giao có tên file, checksum và môi trường. Thư mục model trong `artifacts/` chưa có trong workspace tại thời điểm kiểm tra. B cần nhận file từ A hoặc dựng lại theo nhật ký và đối chiếu checksum với manifest tương ứng. [Bàn giao A → B](A_TO_B_HANDOFF_HELOC.md) |
+| SHAP | Bản smoke Taiwan LR có công thức SHAP tuyến tính trong log-odds với 200 mẫu nền từ train, đặt ngay trong script smoke. Chưa có `explain.py`, SHAP HELOC hay kết quả E2. Tài liệu trước ghi nhận Windows Application Control chặn DLL Numba khi import `shap`; dùng môi trường tương thích nếu lỗi lặp lại. |
+| Bản ghi và SQLite | Đã có `create_record()`, `canonical_serialize()`, `commitments()`, bảng `decisions` lưu JSON hiển thị và canonical bytes dạng BLOB, cùng hai unit test. Còn thiếu golden vectors cố định, migration có phiên bản, retry idempotent và ma trận E3. |
+| Giao diện HELOC | Schema và validation v1 hiện chỉ nhận `taiwan_uci350` và `home_credit_2018`. ID mục tiêu là `fico_heloc_iclr2025`; cần A/B/C duyệt phiên bản schema/API và xác nhận tương thích trước khi lưu record HELOC. Dùng Taiwan làm fixture hồi quy v1. [Hợp đồng giao diện](interface_contract.md) |
 
-File sở hữu: `src/credit_audit/records.py`, `src/credit_audit/storage.py`, `schemas/`, `tests/test_records.py` và file `src/credit_audit/explain.py`, test/fixture mới của B. Không sửa data/ML, Vyper, Web3, UI. Thay đổi file chung cần review A/C.
+## Đầu vào A → B
 
-## Trạng thái đang có
+1. Xác minh SHA-256 của file model trước khi load từ nguồn tin cậy. Dùng đúng môi trường và pipeline của A. Lấy tên và thứ tự 43 feature từ action set `fico_complex_nD`. LR đóng gói scaler trong pipeline; RF/XGBoost dùng scaler đi kèm artifact. Áp dụng cùng cách tiền xử lý cho hồ sơ và tập nền, mỗi bước đúng một lần. [Bàn giao A → B](A_TO_B_HANDOFF_HELOC.md)
+2. Trong CSV, `RiskPerformance` có `Good=1`, `Bad=0`. Dữ liệu sau setup trong nhật ký ghi `Good=+1`, `Bad=-1`. Kiểm tra `classes_` và mapping của từng estimator trong artifact rồi mới chọn cột xác suất. Giá trị trong record luôn là `risk_probability = P(Bad) = 1 - P(Good)`. [Hợp đồng dữ liệu](data_contract.md) · [Nhật ký tái thực nghiệm](references/CHEON_2025_REPLICATION_LOG.md)
+3. Bắt đầu với LR để xác nhận mapping, additivity và tạo fixture; sau đó đánh giá explainer cho RF/XGBoost. Dùng tập nền chỉ lấy từ train, khóa cách lấy mẫu và seed. Ghi tên explainer, phiên bản thư viện, kích thước tập nền và `output_space` cho mỗi lần chạy.
 
-Đã có `canonical_serialize`, `create_record`, SQLite bảng `decisions`, JSON Schema v1 và hai unit test cơ bản. Bản smoke LR dùng công thức SHAP tuyến tính trong log-odds với 200 hàng nền train; residual đã kiểm tra gần 0. Thư viện `shap` cài được nhưng Windows Application Control chặn DLL Numba khi import; cần chuyển tác vụ đó sang WSL/Linux hoặc tìm cấu hình runtime hợp lệ. Chưa có golden vector cố định đủ chuẩn, migration có version, hỗ trợ đầy đủ RF/XGBoost hoặc ma trận E2/E3.
+## Tính SHAP và tạo bản ghi
 
-## Việc cần làm theo thứ tự
+- Với `output_space="probability"`, nếu explainer trả SHAP cho `P(Good)`, đổi `base_value` thành `1 - base_value`, đổi dấu từng contribution và dùng `P(Bad)` làm `model_output`. Kiểm tra `model_output` khớp với `risk_probability` trước khi làm tròn.
+- Với LR trong `output_space="raw"`, nếu margin là log-odds Good, đổi dấu margin, base value và từng contribution để giải thích log-odds Bad. Kiểm tra additivity với margin Bad và kiểm tra sigmoid của margin Bad khớp `risk_probability`.
+- Kiểm tra mọi giá trị hữu hạn và `abs(base_value + sum(contributions) - model_output) <= 1e-5` trước khi làm tròn, theo dung sai hiện có trong `create_record()`. Lưu đủ 43 contribution theo schema feature, kể cả giá trị bằng 0. Sai mapping, additivity hoặc schema phải chặn tạo bản ghi và đăng ký on-chain.
+- Lưu `model_version`, `model_artifact_sha256`, SHAP và xác suất trong record. Tạo `input_reference` ngẫu nhiên theo hợp đồng. Chỉ gửi cho C fixture đã loại thông tin định danh, canonical UTF-8 bytes, `decision_id`, `record_hash` và `model_version_hash`. Hai hash được tính theo công thức trong [hợp đồng giao diện](interface_contract.md).
 
-1. **Đến G0 — 16/11, 20:00:** Review `schemas/decision_record_v1.schema.json` với A/C. Chốt xử lý Unicode NFC, float → chuỗi 8 chữ số half-even, negative zero, timestamp/nonce, optional/null, duplicate feature và lỗi input. Tạo golden vectors với bytes/hash dự kiến và input invalid; hai người khác phải dùng cùng vectors.
-2. **Đến G1 — 20/11, 20:00:** Đưa `explain(artifact, transformed_features)` vào module riêng. Với LR có thể đối chiếu công thức tuyến tính với SHAP package trên WSL; RF/XGBoost phải chọn explainer và `output_space` tương thích phiên bản khóa. Dùng background chỉ từ train và seed cố định. Giao fixture SHAP và record cho C; ghi cách ánh xạ feature đã biến đổi sang tên hiển thị.
-3. **Đến G2 — 29/11, 20:00:** Hoàn thiện persistence: migration có version, unique ID, canonical BLOB/JSON nhất quán, audit fields (tx, chain, block, confirmation, lỗi), retry idempotent. Tạo bản ghi cho artifact FICO HELOC từ A sau khi nâng schema/dataset ID; Taiwan chỉ giữ làm fixture hồi quy. Mọi lỗi additivity hoặc schema phải chặn việc ghi chain.
-4. **Đến G3 — 29/11, 20:00:** E2 đo residual và biểu đồ local/global. E3 tạo các tình huống sửa probability, contribution, model version, JSON hiển thị, canonical bytes, cả record và hash SQLite; chứng minh B2 phát hiện mọi sửa đổi sau anchor. Ghi detection count và false alerts trên fixture sạch.
-5. **Đến G4 — 02/12, 20:00:** Chạy golden vectors, schema tests, migration tests và bàn giao biểu đồ/giới hạn SHAP cho báo cáo.
+## Mốc thực hiện và nghiệm thu
 
-## Tiêu chí nghiệm thu
+| Mốc, 20:00 UTC+7 | Đầu ra của B |
+| --- | --- |
+| G0 · 20/11 | Chốt dataset ID, mapping risk và cách nâng schema với A/C. Chốt golden vector với timestamp, ID và nonce cố định, canonical bytes và hai hash dự kiến. Bao phủ NFC, làm tròn half-even, chuẩn hóa `-0.00000000`, feature trùng và input sai định dạng. |
+| G1 · 25/11 | Chuẩn bị `explain(artifact, transformed_features)`, chạy smoke LR khi có artifact, kiểm tra canonicalization và SQLite. Gửi fixture nhân tạo cho C nếu artifact hoặc schema HELOC còn chờ. |
+| G2 · 29/11 | Tạo bản ghi HELOC sau khi schema được duyệt. Kiểm tra round-trip JSON/BLOB, migration dữ liệu cũ, metadata giao dịch và retry giữ nguyên decision ID. Bàn giao fixture để C chạy HELOC → Anvil → verify. |
+| G3 · 02/12 | E2 ghi số mẫu, số feature, output space, residual trước làm tròn và số mẫu vượt ngưỡng; xuất biểu đồ local/global. E3 phối hợp với C chạy B0 (SQLite), B1 (SQLite + hash local), B2 (cam kết on-chain). |
+| G4 · 02/12 | Chạy lại golden vectors, test schema/migration và kiểm tra fixture Anvil. Bàn giao số đo cùng cấu hình chạy, phiên bản và giới hạn diễn giải SHAP. |
 
-- `base_value + sum(contributions)` khớp `model_output` trong `output_space` đã khai báo trên số chưa làm tròn; record lỗi bị từ chối.
-- Bản ghi lưu mọi local contribution, model version và hash bundle; canonical bytes giữ nguyên qua lưu/đọc/verify. Cùng R cho cùng bytes/hash.
-- Đổi probability hoặc SHAP làm `record_hash` đổi; đổi model version hoặc artifact hash làm cả commitment tương ứng đổi. Golden vectors chạy trong CI.
-- SQLite không để retry tạo ID mới cho cùng yêu cầu và không trả `VERIFIED` chỉ dựa vào hash local.
-- Không lưu ID nguồn hoặc dữ liệu cá nhân thô trong R và không log profile đầu vào.
+Trong E3, kiểm tra riêng thay đổi probability, contribution, model version, JSON hiển thị và canonical bytes. Kiểm tra cả trường hợp sửa record rồi tính lại hash local. Với B2 đã xác nhận, nội dung lệch cam kết phải trả `MISMATCH`; fixture sạch phải trả `VERIFIED` sau khi đủ xác nhận và khớp cả hai hash. Ghi số phát hiện và báo động sai theo từng phương án. [Thiết kế thực nghiệm](IMPLEMENTATION_READINESS_VI.md)
 
-## Prompt đưa cho agent của B
+## Chạy thử với dữ liệu nhỏ và bàn giao cho C
+
+1. **B tạo dữ liệu thử.** Dùng 4 dòng nền, 1 hồ sơ và 2 feature giả lập. Áp dụng mô hình logistic với hệ số cố định rồi tính SHAP tuyến tính trong log-odds. Đây là fixture tương thích schema v1 với ID `taiwan_uci350`. Trường `synthetic: true` trong summary đánh dấu nguồn dữ liệu giả lập.
+2. **B xác minh và bàn giao.** Chạy từ thư mục gốc dự án. Kết quả dự kiến là `risk_probability=0.77729986`, đầu ra log-odds `1.25` và residual `0`. Script kiểm tra canonical bytes và hai commitment sau khi đọc lại từ SQLite.
+
+   ```powershell
+   uv run python scripts/role_b_smoke.py
+   ```
+
+   B gửi thư mục `artifacts/role_b_smoke/` cho C. Script Anvil đọc `audit.sqlite3` và `taiwan_smoke_summary.json` (chứa decision ID và hai hash). `decision_record.json` chứa canonical bytes và `model.json` chứa hệ số mô hình để đối chiếu hash artifact. Mỗi lần B chạy lại sẽ tạo decision ID và record hash mới. C dùng các file từ cùng một lần chạy để đối chiếu.
+
+3. **C chạy Anvil.** Mở Anvil local ở chain ID `31337`, RPC `http://127.0.0.1:8545`, rồi chạy lệnh dưới. Nếu C chỉ cần một fixture mới, có thể tự chạy bước 2.
+
+   ```powershell
+   uv run python scripts/anvil_smoke.py --artifact-dir artifacts/role_b_smoke
+   ```
+
+   Kỳ vọng `VERIFIED` với bản ghi gốc, `MISMATCH` với bản sao bị sửa và tài khoản ngoài quyền writer bị từ chối. C gửi lại `artifacts/role_b_smoke/anvil_smoke_summary.json` có trạng thái xác minh, transaction hash và gas đã dùng.
+
+## Phạm vi file và prompt cho agent của B
+
+B phụ trách `src/credit_audit/explain.py`, `src/credit_audit/records.py`, `src/credit_audit/storage.py`, `schemas/` và test/fixture SHAP, record, storage. Phối hợp A/C khi thay đổi giao diện chung.
 
 ```text
-Bạn là agent phụ trách vai trò B (SHAP, bản ghi, SQLite) của dự án Super Bells. Đọc docs/ROLE_B_SHAP_RECORDS.md, docs/TEAM_3_PERSON_EXECUTION_GUIDE.md, docs/interface_contract.md, docs/IMPLEMENTATION_READINESS_VI.md và kiểm tra git status trước khi sửa. Chỉ sửa các file thuộc B. Nếu cần thay schema/giao diện chung, viết đề xuất rõ sự tương thích để A/C review. Hoàn thành mốc gần nhất chưa đạt, kiểm tra additivity trước làm tròn, chuẩn hóa bytes/hash bằng golden vectors và kiểm thử sửa đổi. Dùng artifact/fixture do A bàn giao; có thể dùng fixture giả lập trước khi artifact sẵn có. Không commit dữ liệu thô, SQLite, model artifact hoặc bí mật. Kết thúc bằng: kết quả, lệnh test, file đã sửa, API/fixture bàn giao cho C, blocker và deadline tiếp theo. Không diễn giải SHAP thành quan hệ nhân quả hoặc bằng chứng công bằng.
+Bạn phụ trách vai trò B (SHAP, bản ghi, SQLite) của dự án Super Bells. Đọc docs/ROLE_B_SHAP_RECORDS.md, docs/A_TO_B_HANDOFF_HELOC.md, docs/interface_contract.md và docs/TEAM_3_PERSON_EXECUTION_GUIDE.md. Kiểm tra git status và sự hiện diện của artifact trước khi làm mốc gần nhất chưa đạt. Bắt đầu với HELOC LR theo fold K05N01. Xác minh checksum, feature order và mapping của estimator. Kiểm tra additivity trước làm tròn trong đúng output space. Gửi đề xuất schema/API cho A/C review trước khi tích hợp HELOC. Dùng fixture nhân tạo để kiểm tra phần độc lập nếu artifact còn chờ. Giữ dữ liệu gốc, model, SQLite và bí mật ngoài Git. Khi bàn giao, ghi file đã sửa, lệnh test, số đo, fixture/API cho C, phần còn vướng và mốc tiếp theo. Diễn giải SHAP theo đầu ra mô hình và tập nền đã dùng.
 ```
-
