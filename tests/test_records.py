@@ -34,3 +34,19 @@ def test_additivity_and_invalid_decimal():
         canonical_serialize(record)
     with pytest.raises(ValueError):
         create_record("taiwan_uci350", {"risk_probability": 0.72, "model_version": "v", "model_artifact_sha256": "a" * 64}, {"method": "m", "output_space": "raw", "base_value": 0, "model_output": 1, "feature_contributions": []})
+
+
+def test_heloc_uses_v2_without_allowing_cross_version_dataset_ids():
+    prediction = {"risk_probability": 0.5, "model_version": "heloc-lr", "model_artifact_sha256": "a" * 64}
+    explanation = {
+        "method": "linear_interventional_shap_formula", "output_space": "raw",
+        "base_value": 0, "model_output": 0,
+        "feature_contributions": [{"feature": f"feature_{index}", "value": 0} for index in range(43)],
+    }
+    record, raw = create_record("fico_heloc_iclr2025", prediction, explanation)
+    assert record["schema_version"] == "2"
+    assert canonical_serialize(record) == raw
+    with pytest.raises(ValueError):
+        canonical_serialize(record | {"schema_version": "1"})
+    with pytest.raises(ValueError):
+        canonical_serialize(record | {"dataset_id": "taiwan_uci350"})

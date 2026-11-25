@@ -1,10 +1,10 @@
-# Hợp đồng giao diện v1
+# Hợp đồng giao diện bản ghi
 
-**Trạng thái:** v1 chỉ chốt cho bản chạy thử Taiwan + Anvil, **chưa hỗ trợ dữ liệu ICLR 2025**. Theo [bối cảnh hiện hành](PROJECT_CONTEXT.md), A/B/C cần nâng schema và API để dùng `fico_heloc_iclr2025` (ưu tiên), `german_credit_iclr2025`, `givemecredit_iclr2025`; cập nhật enum trong JSON Schema, validation trong `records.py`, test và UI đồng bộ trước khi tạo record. Không dùng ID Taiwan/Home Credit để chứa dữ liệu FICO. Mọi thay đổi phá tương thích phải tăng `schema_version` và được ba người phụ trách dữ liệu/ML, bản ghi/SHAP, chain/UI cùng duyệt.
+V1 dùng cho Taiwan/Home Credit và các fixture cũ. [V2](../schemas/decision_record_v2.schema.json) dùng cho FICO HELOC trong pilot Anvil. Hai phiên bản dùng cùng quy tắc chuẩn hóa byte và tham số registry. German Credit và Give Me Some Credit hiện chỉ dùng trong phần tái lập kết quả dự đoán.
 
 ## Định danh và dữ liệu
 
-- `dataset_id` trong v1 hiện tại: `taiwan_uci350` hoặc `home_credit_2018`; mỗi ID ánh xạ một pipeline và artifact riêng. Bộ ID ICLR ở trên là mục tiêu cho version mới, chưa được code hỗ trợ.
+- V1 nhận `taiwan_uci350` hoặc `home_credit_2018`. V2 nhận `fico_heloc_iclr2025`. Mỗi ID ánh xạ một pipeline và artifact riêng.
 - `decision_id`: 32 byte ngẫu nhiên, biểu diễn trong JSON bằng 64 ký tự hex chữ thường, truyền vào Vyper dưới dạng `bytes32`.
 - `input_reference`: 16 byte ngẫu nhiên biểu diễn hex, độc lập với ID gốc.
 - `nonce`: 16 byte ngẫu nhiên biểu diễn hex; `timestamp_utc` ở độ chính xác giây, dạng `YYYY-MM-DDTHH:MM:SSZ`.
@@ -39,7 +39,7 @@ record_hash = SHA256(canonical_bytes)
 model_version_hash = SHA256(UTF8(model_version + "|" + model_artifact_sha256))
 ```
 
-On-chain chỉ có ba `bytes32` trên. `VERIFIED` cần receipt đủ xác nhận và cả hai hash khớp. V1 không ghi đè decision ID.
+On-chain chỉ có ba `bytes32` trên. `VERIFIED` cần receipt đủ xác nhận và cả hai hash khớp. Registry từ chối ghi đè decision ID ở cả hai phiên bản.
 
 ## Phân quyền sửa file
 

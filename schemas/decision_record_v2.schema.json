@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Super Bells FICO HELOC decision record v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "dataset_id", "decision_id", "input_reference", "model_version", "model_artifact_sha256", "risk_probability", "shap_explanation", "timestamp_utc", "nonce"],
+  "properties": {
+    "schema_version": {"const": "2"},
+    "dataset_id": {"const": "fico_heloc_iclr2025"},
+    "decision_id": {"$ref": "decision_record_v1.schema.json#/properties/decision_id"},
+    "input_reference": {"$ref": "decision_record_v1.schema.json#/properties/input_reference"},
+    "model_version": {"$ref": "decision_record_v1.schema.json#/properties/model_version"},
+    "model_artifact_sha256": {"$ref": "decision_record_v1.schema.json#/properties/model_artifact_sha256"},
+    "risk_probability": {"$ref": "decision_record_v1.schema.json#/properties/risk_probability"},
+    "shap_explanation": {"$ref": "decision_record_v1.schema.json#/properties/shap_explanation"},
+    "timestamp_utc": {"$ref": "decision_record_v1.schema.json#/properties/timestamp_utc"},
+    "nonce": {"$ref": "decision_record_v1.schema.json#/properties/nonce"}
+  }
+}

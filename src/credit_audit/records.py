@@ -1,4 +1,4 @@
-"""Canonical v1 decision records and cryptographic commitments."""
+"""Canonical decision records and cryptographic commitments."""
 from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_EVEN
 from hashlib import sha256
@@ -8,7 +8,7 @@ import re
 import secrets
 import unicodedata
 
-DATASETS = {"taiwan_uci350", "home_credit_2018"}
+DATASET_VERSIONS = {"taiwan_uci350": "1", "home_credit_2018": "1", "fico_heloc_iclr2025": "2"}
 FIELDS = {"schema_version", "dataset_id", "decision_id", "input_reference", "model_version", "model_artifact_sha256", "risk_probability", "shap_explanation", "timestamp_utc", "nonce"}
 SHAP_FIELDS = {"method", "output_space", "base_value", "model_output", "feature_contributions"}
 DECIMAL8 = re.compile(r"^-?(?:0|[1-9][0-9]*)\.[0-9]{8}$")
@@ -37,8 +37,11 @@ def _normalize(value):
 
 
 def canonical_serialize(record: dict) -> bytes:
-    if set(record) != FIELDS or record["schema_version"] != "1" or record["dataset_id"] not in DATASETS:
-        raise ValueError("Invalid v1 record fields")
+    if set(record) != FIELDS:
+        raise ValueError("Invalid decision record fields")
+    version = DATASET_VERSIONS.get(record["dataset_id"])
+    if version is None or version != record["schema_version"]:
+        raise ValueError("Invalid decision record fields or dataset version")
     if set(record["shap_explanation"]) != SHAP_FIELDS:
         raise ValueError("Invalid SHAP fields")
     if len(record["decision_id"]) != 64 or len(record["nonce"]) != 32 or len(record["input_reference"]) != 32:
@@ -77,7 +80,7 @@ def canonical_serialize(record: dict) -> bytes:
 
 
 def create_record(dataset_id: str, prediction: dict, explanation: dict, input_reference: str | None = None) -> tuple[dict, bytes]:
-    if dataset_id not in DATASETS:
+    if dataset_id not in DATASET_VERSIONS:
         raise ValueError("Unknown dataset")
     contributions = explanation["feature_contributions"]
     if abs(explanation["base_value"] + sum(v["value"] for v in contributions) - explanation["model_output"]) > 1e-5:
@@ -88,7 +91,7 @@ def create_record(dataset_id: str, prediction: dict, explanation: dict, input_re
         "feature_contributions": [{"feature": c["feature"], "value": fixed8(c["value"])} for c in contributions],
     }
     record = {
-        "schema_version": "1", "dataset_id": dataset_id, "decision_id": secrets.token_hex(32),
+        "schema_version": DATASET_VERSIONS[dataset_id], "dataset_id": dataset_id, "decision_id": secrets.token_hex(32),
         "input_reference": input_reference or secrets.token_hex(16),
         "model_version": prediction["model_version"], "model_artifact_sha256": prediction["model_artifact_sha256"],
         "risk_probability": fixed8(prediction["risk_probability"]), "shap_explanation": shap,
