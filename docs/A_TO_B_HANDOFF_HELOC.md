@@ -1,13 +1,13 @@
 # Bàn giao A → B: FICO HELOC và model ICLR 2025
 
-**Trạng thái:** dữ liệu và ba model đã chạy Table 11, sẵn sàng cho B dùng làm đầu vào SHAP. Nguồn code tác giả khóa tại commit `4c68c73b34eef7c5e38847274048cb3ab66d702c`, thư mục làm việc `artifacts/cheon_iclr2025/research/iclr2025/`. Bản clone/artifact được giữ trong `artifacts/`, không đưa vào Git.
+**Trạng thái:** nhật ký Table 11 ghi nhận đã huấn luyện ba model HELOC. Nguồn code tác giả khóa tại commit `4c68c73b34eef7c5e38847274048cb3ab66d702c`, thư mục làm việc `artifacts/cheon_iclr2025/research/iclr2025/`. Bản clone và artifact được lưu ngoài Git. Trên checkout chưa có model, B cần nhận file từ A hoặc dựng lại theo [nhật ký tái lập](references/CHEON_2025_REPLICATION_LOG.md).
 
 ## Dataset và quy ước đầu vào
 
 - Dataset chính: FICO HELOC theo pipeline của tác giả, `data/fico/fico_data.csv`; SHA-256 `65cf152304303b80c26c33808f7c2400e9b77f9222cc8160213d6893b11ee2a4`. Bản đầu vào có 10.459 dòng × 24 cột (nhãn `RiskPerformance` + 23 biến), không có missing. File processed của tác giả sau setup: 5.842 dòng × 43 feature; train/test 4.674/1.168 theo fold `K05N01`.
 - Dùng xử lý của tác giả trong `experiment/setup_dataset_actionset_fico.py` và feature schema của action set `fico_complex_nD`; không tự suy feature order từ 23 cột CSV vì pipeline tạo 43 feature sau xử lý.
-- Chiều nhãn: `RiskPerformance=1` là Good, `0` là Bad. Khi B tạo record, `risk_probability` phải là `P(Bad) = 1 - P(Good)`. Xác suất lớp 1 của model tác giả là `P(Good)`; không ghi trực tiếp nó thành risk.
-- Không đưa `RiskPerformance`, ID hồ sơ nguồn, hay thông tin định danh vào SHAP feature values hoặc decision record. Bản ghi chỉ cần input reference đã băm theo hợp đồng chung.
+- Trong CSV, `RiskPerformance=1` là Good, `0` là Bad. Nhật ký sau setup ghi `Good=+1`, `Bad=-1`. Kiểm tra mapping và `classes_` trong từng artifact trước khi chọn cột xác suất. Khi tạo record, dùng `risk_probability = P(Bad) = 1 - P(Good)`.
+- Loại `RiskPerformance`, ID hồ sơ nguồn và thông tin định danh khỏi SHAP feature và decision record. Dùng `input_reference` ngẫu nhiên theo hợp đồng giao diện.
 
 ## Model artifacts A bàn giao
 
@@ -25,7 +25,7 @@ Các file là pickle/dill của mã tác giả, cần load trong môi trường 
 
 1. Đọc ba model từ `artifacts/cheon_iclr2025/research/iclr2025/results/`; dùng đúng pipeline/scaler và thứ tự 43 feature từ action set của tác giả. LR lưu `Pipeline(scaler, clf)`; XGBoost/RF lưu estimator và scaler tách riêng trong object đã serialize.
 2. Tính và ghi rõ SHAP trong output space nhất quán với `risk_probability=P(Bad)`. Kiểm tra additivity trước làm tròn. Nếu explainer tính SHAP cho `P(Good)`, phải chuyển toàn bộ output/background/contributions nhất quán sang `P(Bad)` hoặc giải thích trực tiếp lớp Bad.
-3. Thêm `fico_heloc` vào enum/schema và API qua version/migration có review; hiện `decision_record_v1.schema.json` chỉ cho phép Taiwan/Home Credit nên chưa thể ghi record FICO bằng schema hiện tại.
+3. Dùng ID mục tiêu `fico_heloc_iclr2025` theo [hợp đồng giao diện](interface_contract.md). Cần A/B/C duyệt phiên bản schema/API trước khi tạo record HELOC. Schema v1 hiện chỉ nhận Taiwan/Home Credit.
 4. Gửi fixture đã ẩn thông tin định danh cho C, kèm `dataset_id`, `model_version`, hash artifact, `risk_probability`, SHAP values và cách canonicalize. Không gửi toàn bộ hồ sơ cá nhân cho chain.
 
 ## Bằng chứng liên quan
