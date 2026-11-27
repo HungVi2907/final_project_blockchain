@@ -13,6 +13,7 @@ from time import perf_counter
 from web3 import Web3
 
 from credit_audit.chain import compile_registry, deploy, verify
+from credit_audit.mvp import load_fixture
 from credit_audit.records import canonical_serialize, commitments, create_record
 from credit_audit.storage import connect, get, save
 
@@ -31,24 +32,12 @@ def prepare_heloc(args):
 
 
 def prepare_fixture(directory):
-    raw = (directory / "decision_record.json").read_bytes()
-    record = json.loads(raw)
-    fixture = json.loads((directory / "taiwan_smoke_summary.json").read_text(encoding="utf-8"))
-    record_hash, model_hash = commitments(record, raw)
-    if (
-        record["decision_id"] != fixture["decision_id"]
-        or record_hash.hex() != fixture["record_hash"]
-        or model_hash.hex() != fixture["model_version_hash"]
-        or sha256((directory / "model.json").read_bytes()).hexdigest() != record["model_artifact_sha256"]
-        or fixture.get("synthetic") is not True
-    ):
-        raise ValueError("The Role B fixture files do not agree")
-    db_uri = (directory / "audit.sqlite3").resolve().as_uri() + "?mode=ro"
-    with closing(sqlite3.connect(db_uri, uri=True)) as source:
-        saved = get(source, record["decision_id"])
-        if saved is None or saved["canonical_bytes"] != raw or commitments(saved["record"], raw) != (record_hash, model_hash):
-            raise ValueError("Role B SQLite does not match the fixture files")
-    return record, raw, {"synthetic": True, "shap_residual": fixture["shap_residual"]}
+    summary = json.loads((directory / "taiwan_smoke_summary.json").read_text(encoding="utf-8"))
+    synthetic = summary["synthetic"]
+    if not isinstance(synthetic, bool):
+        raise ValueError("The Role B summary is missing its fixture type")
+    fixture = load_fixture(directory, synthetic=synthetic)
+    return fixture.record, fixture.canonical_bytes, {"synthetic": synthetic, "shap_residual": summary["shap_residual"]}
 
 
 def register(args, record, raw):
@@ -118,7 +107,7 @@ def main():
     parser.add_argument("--author-repo", type=Path, default=ROOT / "artifacts" / "cheon_iclr2025")
     parser.add_argument("--author-python", type=Path, help="Python from the pinned author environment")
     parser.add_argument("--test-offset", type=int, default=0)
-    parser.add_argument("--fixture-dir", type=Path, help="Anchor the existing synthetic Role B fixture instead of HELOC")
+    parser.add_argument("--fixture-dir", type=Path, help="Anchor a supplied synthetic or HELOC Role B fixture")
     parser.add_argument("--port", type=int, default=18545)
     parser.add_argument("--output", type=Path, required=True, help="A new directory for the SQLite and receipt evidence")
     args = parser.parse_args()

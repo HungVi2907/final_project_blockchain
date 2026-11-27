@@ -5,6 +5,7 @@ import json
 import sqlite3
 
 from web3 import Web3
+from web3.exceptions import ContractLogicError
 
 from credit_audit.chain import compile_registry, deploy, verify
 from credit_audit.records import canonical_serialize, commitments
@@ -33,10 +34,11 @@ def main():
     if (record_hash.hex(), model_hash.hex()) != (summary["record_hash"], summary["model_version_hash"]):
         raise RuntimeError("SQLite commitments do not match the smoke summary")
     registry = deploy(w3, compile_registry(ROOT / "contracts/DecisionRegistry.vy"), admin)
-    assert verify(db, registry, w3, decision_id) == "NOT_FOUND"
+    if not saved["tx_hash"]:
+        assert verify(db, registry, w3, decision_id) == "PENDING"
     try:
         registry.functions.register_record(bytes.fromhex(decision_id), record_hash, model_hash).transact({"from": non_writer})
-    except Exception:
+    except ContractLogicError:
         pass
     else:
         raise AssertionError("Non-writer was allowed to register")
