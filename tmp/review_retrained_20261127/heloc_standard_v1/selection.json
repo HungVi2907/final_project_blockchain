@@ -1,0 +1,78 @@
+{
+  "selected_model": "XGB",
+  "criterion": "validation AP, then ROC-AUC, then model name",
+  "threshold_rule": "maximize validation F1 for Bad, choose highest threshold on exact ties",
+  "validation": {
+    "LR": {
+      "rows": 935,
+      "bad_count": 499,
+      "threshold": 0.38638756583118977,
+      "roc_auc": 0.7688657130775312,
+      "average_precision": 0.7634920039076255,
+      "log_loss": 0.5744468709981885,
+      "brier_score": 0.1947554178094767,
+      "precision": 0.6591591591591591,
+      "recall": 0.8797595190380761,
+      "f1": 0.7536480686695279,
+      "tn": 209,
+      "fp": 227,
+      "fn": 60,
+      "tp": 439
+    },
+    "RF": {
+      "rows": 935,
+      "bad_count": 499,
+      "threshold": 0.3254501744968832,
+      "roc_auc": 0.7651909323233623,
+      "average_precision": 0.7615318396481995,
+      "log_loss": 0.5767063105298852,
+      "brier_score": 0.1962343088763337,
+      "precision": 0.6282225237449118,
+      "recall": 0.9278557114228457,
+      "f1": 0.7491909385113269,
+      "tn": 162,
+      "fp": 274,
+      "fn": 36,
+      "tp": 463
+    },
+    "XGB": {
+      "rows": 935,
+      "bad_count": 499,
+      "threshold": 0.4324808418750763,
+      "roc_auc": 0.7680176867496461,
+      "average_precision": 0.7667196655773242,
+      "log_loss": 0.5801625332111392,
+      "brier_score": 0.1973585004776745,
+      "precision": 0.6836902800658978,
+      "recall": 0.8316633266533067,
+      "f1": 0.7504520795660036,
+      "tn": 244,
+      "fp": 192,
+      "fn": 84,
+      "tp": 415
+    }
+  },
+  "tuning": {
+    "LR": {
+      "best_params": {
+        "model__C": 0.01
+      },
+      "best_cv_ap": 0.7636236638761867
+    },
+    "RF": {
+      "best_params": {
+        "max_depth": 8,
+        "min_samples_leaf": 12
+      },
+      "best_cv_ap": 0.76841934463974
+    },
+    "XGB": {
+      "best_params": {
+        "learning_rate": 0.03,
+        "max_depth": 2,
+        "n_estimators": 100
+      },
+      "best_cv_ap": 0.7697154667327566
+    }
+  }
+}
