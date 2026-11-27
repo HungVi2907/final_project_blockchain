@@ -1,0 +1,67 @@
+{
+  "measured_on": "2026-11-25",
+  "auc": {
+    "fold": "K05N01",
+    "test_fold": 5,
+    "test_rows": 1168,
+    "pilot_seed": 2338,
+    "training_seeds": [
+      2338,
+      2339,
+      2340,
+      2341,
+      2342,
+      2343,
+      2344
+    ],
+    "models": [
+      {
+        "model": "LR",
+        "paper": 0.788,
+        "pilot": 0.7882486341614268,
+        "mean": 0.7882486341614268
+      },
+      {
+        "model": "RF",
+        "paper": 0.79,
+        "pilot": 0.7866405525203588,
+        "mean": 0.7871395543064148
+      },
+      {
+        "model": "XGBoost",
+        "paper": 0.785,
+        "pilot": 0.7902395923837012,
+        "mean": 0.7893328901501846
+      }
+    ]
+  },
+  "e3": {
+    "network": "anvil/v1.9.0",
+    "chain_id": 31337,
+    "groups": 5,
+    "profiles_per_group": 40,
+    "anchors": 200,
+    "distinct_profiles": 184,
+    "baselines": [
+      {
+        "name": "B0",
+        "detected": 0,
+        "false_alerts": 0
+      },
+      {
+        "name": "B1",
+        "detected": 0,
+        "false_alerts": 0
+      },
+      {
+        "name": "B2",
+        "detected": 200,
+        "false_alerts": 0
+      }
+    ],
+    "b2_registration_gas_median": 93507.0,
+    "b2_registration_gas_p95": 93507.0,
+    "b2_receipt_ms_median": 65.01285449985517,
+    "b2_receipt_ms_p95": 83.12791670045954
+  }
+}

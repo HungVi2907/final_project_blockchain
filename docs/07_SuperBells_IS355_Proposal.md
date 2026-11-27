@@ -97,7 +97,7 @@ Hình 1. Quy trình off-chain/on-chain và vị trí của cải tiến I1.
 | German Credit | Nguồn tác giả: 1.000 × 62; sau setup 1.000 × 36. | Thực nghiệm tái lập độc lập và kiểm tra độ vững; không dùng mô hình HELOC để dự đoán German. |
 | Give Me Some Credit | Nguồn tác giả: 150.000 × 11; sau setup 120.268 × 23. | Thực nghiệm tái lập độc lập; ghi rõ oversampling trong mã tác giả và số mẫu đánh giá sau resampling. |
 
-Nguồn dữ liệu và kết quả tái lập đã được kiểm tra theo checksum, commit tác giả, seed và cấu hình ghi trong nhật ký [5]. Test ROC-AUC HELOC hiện có: LR 0,7775; RF 0,7866; XGBoost 0,7903. Đây là kết quả một cấu hình tái lập, chưa phải trung bình nhiều seed. Phân tích EDA chi tiết, đối chiếu nhiều lần chạy và kiểm thử B0/B1/B2 là bước tiếp theo.
+Nguồn dữ liệu và kết quả tái lập đã được kiểm tra theo checksum, commit tác giả, seed và cấu hình ghi trong nhật ký [5]. Trên cùng 1.168 hồ sơ test HELOC, ROC-AUC tính bằng scikit-learn từ P(Bad) lần lượt là 0,7882 cho LR, 0,7866 cho RF và 0,7902 cho XGBoost. Pipeline LR chuẩn hóa đầu vào một lần khi dự đoán. Đây là kết quả của seed 2338. Phân tích EDA chi tiết, đối chiếu nhiều lần chạy và kiểm thử B0/B1/B2 là bước tiếp theo.
 
 ## 3.3. Công cụ và kiến trúc
 

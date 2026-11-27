@@ -1,0 +1,29 @@
+[server]
+maxUploadSize = 1
+
+[client]
+toolbarMode = "minimal"
+
+[theme]
+base = "light"
+primaryColor = "#007669"
+backgroundColor = "#e4f3ec"
+secondaryBackgroundColor = "#f8fbf4"
+textColor = "#15372f"
+linkColor = "#00675c"
+borderColor = "#65867b"
+codeBackgroundColor = "#e1efe9"
+codeTextColor = "#15372f"
+blueColor = "#3f6ea3"
+blueBackgroundColor = "#e1f3f4"
+blueTextColor = "#264d70"
+greenColor = "#267a52"
+greenBackgroundColor = "#e0f3e6"
+greenTextColor = "#205e41"
+redColor = "#a7364f"
+redBackgroundColor = "#fbe9ec"
+redTextColor = "#8a2940"
+yellowColor = "#87570a"
+yellowBackgroundColor = "#fff1d1"
+yellowTextColor = "#734908"
+font = "sans serif"
